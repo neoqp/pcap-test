@@ -49,10 +49,13 @@ int main(int argc, char* argv[]) {
 		printf("%u bytes captured\n", header->caplen);
 
 		struct libnet_ethernet_hdr *ethernet = (struct libnet_ethernet_hdr *) packet;
-		struct libnet_ipv4_hdr *ipv4 = (struct libnet_ipv4_hdr *) (packet+sizeof(ethernet));
-		struct libnet_tcp_hdr *tcp = (struct libnet_tcp_hdr *) (packet+sizeof(ethernet)+sizeof(ipv4));
-		int data_len = header->caplen - sizeof(ethernet)+sizeof(ipv4)+sizeof(tcp);
-		const u_char* normalPacket = (u_char *) (packet+sizeof(ethernet)+sizeof(ipv4)+sizeof(tcp));
+		if(ethernet->ether_type!=ntohs(0x0800)) continue;
+
+		struct libnet_ipv4_hdr *ipv4 = (struct libnet_ipv4_hdr *) (packet+sizeof(*ethernet));
+		if(ipv4->ip_p!=6) continue;
+		struct libnet_tcp_hdr *tcp = (struct libnet_tcp_hdr *) (packet+sizeof(*ethernet)+(ipv4->ip_hl)*4);
+		int data_len = header->caplen - (sizeof(*ethernet)+(ipv4->ip_hl)*4+(tcp->th_off)*4);
+		const u_char* normalPacket = (u_char *) (packet+sizeof(*ethernet)+(ipv4->ip_hl)*4+(tcp->th_off)*4);
 
 		print_ETHER(ethernet);
 		print_IPv4(ipv4);
